@@ -1,35 +1,22 @@
 import allure
 
-from api_client import CourierApi, OrderApi
+from api_client import OrderApi
 from data import Messages
-from helpers import (
-    cancel_order,
-    delete_courier_by_id,
-    finish_order,
-    generate_courier_payload,
-    get_courier_id,
-)
 
 
 @allure.epic("Sprint 7")
 @allure.feature("Accept order")
 class TestAcceptOrder:
     @allure.title("Order can be accepted")
-    def test_accept_order_success(self, order):
-        _, track, order_id = order
-        courier_payload = generate_courier_payload()
-        CourierApi.create_courier(courier_payload)
-        courier_id = get_courier_id(courier_payload)
+    def test_accept_order_success(self, courier, order, accepted_order_cleaner):
+        _, courier_id = courier
+        _, _, order_id = order
+        accepted_order_cleaner(order_id)
 
         response = OrderApi.accept_order(order_id, courier_id)
 
-        try:
-            assert response.status_code == 200
-            assert response.json() == {"ok": True}
-        finally:
-            finish_order(order_id)
-            cancel_order(track)
-            delete_courier_by_id(courier_id)
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
 
     @allure.title("Order cannot be accepted without courier id")
     def test_accept_order_without_courier_id_returns_error(self, order):
@@ -66,4 +53,3 @@ class TestAcceptOrder:
 
         assert response.status_code == 404
         assert response.json()["message"] == Messages.ORDER_ID_NOT_FOUND
-
